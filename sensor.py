@@ -73,7 +73,8 @@ class FSolarSensor(CoordinatorEntity, RestoreEntity, SensorEntity):
         self._daily_energy = 0.0  # Acumulador de energia do dia
         self._last_power = 0.0  # Última potência registrada
         self._last_update = None  # Última atualização
-        self._last_reset_date = None  # Data do último reset
+        # CORREÇÃO: Inicializar com data de hoje para evitar reset indevido
+        self._last_reset_date = dt_util.now().date().isoformat()  # Data do último reset
         
         _LOGGER.debug(
             "Sensor %s initialized with nominal voltage: %.1f V",
@@ -113,7 +114,17 @@ class FSolarSensor(CoordinatorEntity, RestoreEntity, SensorEntity):
             last_state = await self.async_get_last_state()
             if last_state and last_state.state not in (None, "unknown", "unavailable"):
                 try:
-                    self._daily_energy = float(last_state.state)
+                    restored_value = float(last_state.state)
+                    
+                    # Validar valor restaurado (não pode ser negativo ou absurdamente alto)
+                    if restored_value < 0 or restored_value > 1000:
+                        _LOGGER.warning(
+                            "Device %s - Invalid restored value %.3f kWh, resetting to 0",
+                            self._device_id, restored_value
+                        )
+                        self._daily_energy = 0.0
+                    else:
+                        self._daily_energy = restored_value
                     
                     # Restaurar atributos
                     if last_state.attributes:
@@ -122,7 +133,11 @@ class FSolarSensor(CoordinatorEntity, RestoreEntity, SensorEntity):
                         if "last_update" in last_state.attributes:
                             last_update_str = last_state.attributes["last_update"]
                             if last_update_str:
-                                self._last_update = dt_util.parse_datetime(last_update_str)
+                                try:
+                                    self._last_update = dt_util.parse_datetime(last_update_str)
+                                except (ValueError, TypeError):
+                                    _LOGGER.debug("Could not parse last_update, ignoring")
+                                    self._last_update = None
                         if "last_power" in last_state.attributes:
                             self._last_power = float(last_state.attributes.get("last_power", 0))
                     
@@ -139,12 +154,21 @@ class FSolarSensor(CoordinatorEntity, RestoreEntity, SensorEntity):
                         self._last_update = None
                     else:
                         _LOGGER.info(
-                            "Device %s - Restored %s: %.3f kWh",
-                            self._device_id, self._sensor_type, self._daily_energy
+                            "Device %s - Restored %s: %.3f kWh (last reset: %s)",
+                            self._device_id, self._sensor_type, self._daily_energy, self._last_reset_date
                         )
                 except (ValueError, TypeError) as err:
-                    _LOGGER.warning("Could not restore %s state: %s", self._sensor_type, err)
+                    _LOGGER.warning(
+                        "Device %s - Could not restore %s state: %s - Starting fresh",
+                        self._device_id, self._sensor_type, err
+                    )
+                    # Manter valores inicializados no __init__ (já com data de hoje)
                     self._daily_energy = 0.0
+            else:
+                _LOGGER.debug(
+                    "Device %s - No valid previous state for %s, starting at 0",
+                    self._device_id, self._sensor_type
+                )
 
     def _calculate_time_remaining(self, data: dict) -> float | None:
         """Calculate time remaining based on current state.
@@ -214,10 +238,10 @@ class FSolarSensor(CoordinatorEntity, RestoreEntity, SensorEntity):
                     self._device_id, capacity_kwh
                 )
             
-            # Se em standby, não há tempo de descarga/carga
+            # Se em standby, retornar 0 (não está carregando nem descarregando)
             if charging_state == 0:
-                _LOGGER.debug("Device %s in standby, no time calculation", self._device_id)
-                return None
+                _LOGGER.debug("Device %s in standby, returning 0 (no charge/discharge)", self._device_id)
+                return 0.0
             
             # PRIORIDADE 1: Tentar cálculo por CORRENTE (mais preciso)
             if charging_state == 2:  # Descarregando
