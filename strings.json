@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure FSolar Battery",
+        "description": "Enter your FSolar account credentials",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to FSolar API. Please check your internet connection.",
+      "invalid_auth": "Invalid email or password. Please check your credentials.",
+      "unknown": "Unexpected error occurred. Please try again."
+    },
+    "abort": {
+      "already_configured": "This FSolar account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "FSolar Options",
+        "description": "Configure FSolar integration options",
+        "data": {
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurar FSolar Battery",
+        "description": "Insira as credenciais da sua conta FSolar",
+        "data": {
+          "email": "Email",
+          "password": "Senha"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Falha ao conectar com a API FSolar",
+      "invalid_auth": "Credenciais inválidas",
+      "unknown": "Erro desconhecido"
+    },
+    "abort": {
+      "already_configured": "Conta já configurada"
+    }
+  }
+}
