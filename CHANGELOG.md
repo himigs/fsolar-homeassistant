@@ -1,5 +1,67 @@
 # Changelog - FSolar Plugin Modificado
 
+## Versão 1.6.1 - Correção de Bugs Críticos (2024-12-19)
+
+### 🐛 Bugs Corrigidos
+
+#### Bug 1: time_remaining indisponível em standby
+**Problema:** Sensor ficava "unavailable" quando bateria estava em standby  
+**Correção:** Retorna 0 ao invés de None  
+**Impacto:** ✅ Sensor sempre disponível  
+
+**Antes:**
+```yaml
+sensor.time_remaining: unavailable
+```
+
+**Depois:**
+```yaml
+sensor.time_remaining: 0  # Não está carregando/descarregando
+```
+
+#### Bug 2: Sensores diários zerados ao reiniciar
+**Problema:** daily_charge_kwh e daily_discharge_kwh perdiam valores ao reiniciar Home Assistant  
+**Causa:** `_last_reset_date` inicializado como `None` → sempre comparava diferente → sempre resetava  
+**Correção:** Inicializar `_last_reset_date` com data de hoje no `__init__`  
+**Impacto:** ✅ Valores persistem entre reinícios  
+
+**Antes:**
+```
+Reinicia HA → Perde 3.45 kWh acumulados
+```
+
+**Depois:**
+```
+Reinicia HA → Mantém 3.45 kWh ✅
+```
+
+### 📝 Mudanças Técnicas
+
+**Arquivo Modificado:** `sensor.py`
+
+**Correções implementadas:**
+1. Linha ~76: Inicializar `_last_reset_date` com data atual
+2. Linha ~220: Retornar `0.0` ao invés de `None` em standby
+3. Linha ~116: Validação de valores restaurados (< 0 ou > 1000 kWh)
+4. Melhor tratamento de erros na restauração
+5. Mais logs para debug
+
+### ⚠️ Nota Importante
+
+**Primeira vez após atualizar:**
+- Sensores daily_* podem começar do zero
+- Normal - começarão a acumular imediatamente
+- Após primeiro ciclo, persistência funcionará perfeitamente
+
+### 📚 Documentação
+
+**Novo arquivo:** `BUGFIX_v1.6.1.md`
+- Explicação detalhada dos bugs
+- Causa raiz de cada problema
+- Testes para validar correção
+
+---
+
 ## Versão 1.6.0 - Sensores de Energia Diária (2024-12-19)
 
 ### 🆕 Dois Novos Sensores para Energy Dashboard
