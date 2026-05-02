@@ -72,7 +72,7 @@ SENSOR_DESCRIPTIONS: tuple[FSolarSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY_STORAGE,
         state_class=SensorStateClass.MEASUREMENT,
         precision=2,
-        value_fn=lambda data, nom_v: ((float(cap) * nom_v) / 1000 * float(soc) / 100) if (cap := data.get("battCapacity") or data.get("emsCapacity") or data.get("totalEmsCapacity")) and (soc := data.get("battSoc") or data.get("emsSoc")) else None,
+        # value_fn omitted — computed by FSolarRemainingEnergySensor (supports DOD)
     ),
     FSolarSensorEntityDescription(
         key="time_to_full",
@@ -186,7 +186,13 @@ SENSOR_DESCRIPTIONS: tuple[FSolarSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         precision=2,
-        value_fn=lambda data, nom_v: (float(cap) * nom_v) / 1000 if (cap := data.get("battCapacity") or data.get("emsCapacity") or data.get("totalEmsCapacity")) else None,
+        value_fn=lambda data, nom_v: (
+            float(re)
+            if (re := data.get("ratedEnergy"))
+            else (float(cap) * nom_v) / 1000
+            if (cap := data.get("battCapacity") or data.get("emsCapacity") or data.get("totalEmsCapacity"))
+            else None
+        ),
     ),
     FSolarSensorEntityDescription(
         key="health",
@@ -316,6 +322,15 @@ SENSOR_DESCRIPTIONS: tuple[FSolarSensorEntityDescription, ...] = (
         precision=1,
         value_fn=lambda data, _: data.get("heatCurr"),
     ),
+    FSolarSensorEntityDescription(
+        key="last_update",
+        name="Last Update",
+        translation_key="last_update",
+        icon="mdi:clock-check-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # value_fn omitted — handled by FSolarLastUpdateSensor
+    ),
 )
 
 
@@ -365,12 +380,16 @@ async def async_setup_entry(
     entities = []
     for device_id, device_data in coordinator.data.items():
         device_info = device_data["device_info"]
-        
+
         for desc in ALL_DESCRIPTIONS:
             if desc.key in ("daily_charge_kwh", "daily_discharge_kwh"):
                 entities.append(FSolarDailyEnergySensor(coordinator, device_id, device_info, desc, entry))
             elif desc.key in ("time_to_full", "time_to_empty"):
                 entities.append(FSolarTimeRemainingSensor(coordinator, device_id, device_info, desc, entry))
+            elif desc.key == "battery_remaining_kwh":
+                entities.append(FSolarRemainingEnergySensor(coordinator, device_id, device_info, desc, entry))
+            elif desc.key == "last_update":
+                entities.append(FSolarLastUpdateSensor(coordinator, device_id, device_info, desc, entry))
             else:
                 entities.append(FSolarSensor(coordinator, device_id, device_info, desc, entry))
 
@@ -526,6 +545,58 @@ class FSolarTimeRemainingSensor(FSolarBaseSensor):
             pass
             
         return None
+
+
+class FSolarRemainingEnergySensor(FSolarBaseSensor):
+    """Calculates battery remaining energy, optionally accounting for the DOD safety reserve."""
+
+    def __init__(self, coordinator, device_id, device_info, description, entry) -> None:
+        super().__init__(coordinator, device_id, device_info, description, entry)
+        self._use_safety_reserve = entry.options.get("use_safety_reserve", False)
+        self._safety_reserve_percent = float(entry.options.get("safety_reserve_percent", 10))
+
+    @property
+    def native_value(self):
+        data = extract_battery_data(self.coordinator.data, self._device_id)
+        if not data:
+            return None
+
+        soc_raw = data.get("battSoc") or data.get("emsSoc")
+        if soc_raw is None:
+            return None
+        soc = float(soc_raw)
+
+        # Prefer ratedEnergy from API (exact nameplate value), fall back to Ah × V calculation
+        rated_e = data.get("ratedEnergy")
+        if rated_e is not None:
+            try:
+                total_kwh = float(rated_e)
+            except (ValueError, TypeError):
+                total_kwh = None
+        else:
+            total_kwh = None
+
+        if total_kwh is None:
+            cap = data.get("battCapacity") or data.get("emsCapacity") or data.get("totalEmsCapacity")
+            if cap is None:
+                return None
+            total_kwh = (float(cap) * self._nominal_voltage) / 1000
+
+        # Subtract safety reserve from effective SOC if enabled
+        if self._use_safety_reserve:
+            effective_soc = max(0.0, soc - self._safety_reserve_percent)
+        else:
+            effective_soc = soc
+
+        return round(total_kwh * effective_soc / 100, 2)
+
+
+class FSolarLastUpdateSensor(FSolarBaseSensor):
+    """Diagnostic sensor showing the timestamp of the last successful API update."""
+
+    @property
+    def native_value(self):
+        return self.coordinator.last_successful_update
 
 
 class FSolarDailyEnergySensor(FSolarBaseSensor, RestoreEntity):

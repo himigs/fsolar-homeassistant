@@ -86,6 +86,7 @@
       "max_cell_temp":            { "name": "Max Cell Temperature" },
       "min_cell_temp":            { "name": "Min Cell Temperature" },
       "heat_current":             { "name": "Heat Current" },
+      "last_update":              { "name": "Last Update" },
       "cell_1_voltage":  { "name": "Cell 1 Voltage" },
       "cell_2_voltage":  { "name": "Cell 2 Voltage" },
       "cell_3_voltage":  { "name": "Cell 3 Voltage" },
@@ -106,6 +107,11 @@
       "cell_2_temp":     { "name": "Cell 2 Temperature" },
       "cell_3_temp":     { "name": "Cell 3 Temperature" },
       "cell_4_temp":     { "name": "Cell 4 Temperature" }
+    },
+    "binary_sensor": {
+      "battery_charging":    { "name": "Battery Charging" },
+      "battery_discharging": { "name": "Battery Discharging" },
+      "battery_low":         { "name": "Battery Low" }
     }
   }
 }

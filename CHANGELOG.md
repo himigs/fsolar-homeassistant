@@ -1,6 +1,20 @@
 # Changelog - FSolar Integration
 
-## Versão 2.1.0 - Maturidade e Autonomia Inteligente (Maio/2026)
+## Versão 2.2.0 - Smart Sensors & HACS Ready (Maio/2026)
+
+### ✨ Novas Funcionalidades:
+- **Binary Sensors:** 3 novos sensores binários: `battery_charging`, `battery_discharging` e `battery_low`. Limite do `battery_low` é dinâmico — usa a reserva de segurança configurada ou 20% como padrão.
+- **Sensor `last_update`:** Sensor diagnóstico de timestamp mostrando quando foi a última comunicação bem-sucedida com a API.
+- **`hacs.json`:** Integração agora é descobrível e instalável diretamente pelo HACS.
+- **Ícone para Tema Claro:** Adicionado `brand/dark_icon.png` para exibição correta no tema claro do Home Assistant.
+
+### 🔧 Melhorias:
+- **`battery_remaining_kwh` com DOD:** Sensor de energia disponível agora subtrai a reserva de segurança do SOC, exibindo apenas a energia realmente utilizável.
+- **`battery_capacity_kwh` via API:** Usa o campo `ratedEnergy` retornado diretamente pela API (valor exato de placa), com fallback para o cálculo Ah × V.
+
+---
+
+## Versão 2.1.0 - Zero Config, Smarter Sensors (Maio/2026)
 
 ### ✨ Melhorias:
 - **Tensão Nominal Automática:** A tensão nominal da bateria agora é detectada automaticamente pela API (campos `volt` / `rateVolt`). O seletor manual de voltagem foi removido das configurações, simplificando a experiência do usuário.

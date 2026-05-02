@@ -86,6 +86,7 @@
       "max_cell_temp":            { "name": "Temperatura Máxima de Célula" },
       "min_cell_temp":            { "name": "Temperatura Mínima de Célula" },
       "heat_current":             { "name": "Corrente de Aquecimento" },
+      "last_update":              { "name": "Última Atualização" },
       "cell_1_voltage":  { "name": "Tensão Célula 1" },
       "cell_2_voltage":  { "name": "Tensão Célula 2" },
       "cell_3_voltage":  { "name": "Tensão Célula 3" },
@@ -106,6 +107,11 @@
       "cell_2_temp":     { "name": "Temperatura Célula 2" },
       "cell_3_temp":     { "name": "Temperatura Célula 3" },
       "cell_4_temp":     { "name": "Temperatura Célula 4" }
+    },
+    "binary_sensor": {
+      "battery_charging":    { "name": "Bateria Carregando" },
+      "battery_discharging": { "name": "Bateria Descarregando" },
+      "battery_low":         { "name": "Bateria Baixa" }
     }
   }
 }
