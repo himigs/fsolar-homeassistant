@@ -5,29 +5,107 @@
         "title": "Configure FSolar Battery",
         "description": "Enter your FSolar account credentials",
         "data": {
-          "email": "Email",
-          "password": "Password"
+          "username": "Email",
+          "password": "Password",
+          "password_encrypted": "Password Already Encrypted? (RSA)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate FSolar",
+        "description": "Your credentials have expired. Please re-enter them.",
+        "data": {
+          "username": "Email",
+          "password": "Password",
+          "password_encrypted": "Password Already Encrypted? (RSA)"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure FSolar",
+        "description": "Update your FSolar account credentials",
+        "data": {
+          "username": "Email",
+          "password": "Password",
+          "password_encrypted": "Password Already Encrypted? (RSA)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to FSolar API. Please check your internet connection.",
-      "invalid_auth": "Invalid email or password. Please check your credentials.",
+      "cannot_connect": "Failed to connect to the FSolar API. Check your internet connection.",
+      "invalid_auth": "Invalid email or password. Check your credentials.",
       "unknown": "Unexpected error occurred. Please try again."
     },
     "abort": {
-      "already_configured": "This FSolar account is already configured."
+      "already_configured": "This FSolar account is already configured.",
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "FSolar Options",
-        "description": "Configure FSolar integration options",
+        "description": "Configure integration options",
         "data": {
-          "scan_interval": "Update interval (minutes)"
+          "use_safety_reserve": "Enable Safety Reserve (DOD Limit)",
+          "safety_reserve_percent": "Safety Reserve (%)",
+          "scan_interval": "Update Interval (minutes)"
         }
       }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_soc":            { "name": "Battery State of Charge" },
+      "battery_remaining_kwh":  { "name": "Battery Remaining Energy" },
+      "time_to_full":           { "name": "Time to Full" },
+      "time_to_empty":          { "name": "Time to Empty" },
+      "charging_status": {
+        "name": "Charging Status",
+        "state": {
+          "standby":     "Standby",
+          "charging":    "Charging",
+          "discharging": "Discharging"
+        }
+      },
+      "battery_power":            { "name": "Battery Power" },
+      "battery_voltage":          { "name": "Battery Voltage" },
+      "battery_current":          { "name": "Battery Current" },
+      "daily_charge_kwh":         { "name": "Daily Charge" },
+      "daily_discharge_kwh":      { "name": "Daily Discharge" },
+      "battery_temperature":      { "name": "Battery Temperature" },
+      "battery_capacity":         { "name": "Battery Capacity" },
+      "battery_capacity_kwh":     { "name": "Battery Capacity (kWh)" },
+      "health":                   { "name": "Battery Health" },
+      "cycles":                   { "name": "Battery Cycles" },
+      "charge_voltage_limit":     { "name": "Charge Voltage Limit" },
+      "discharge_voltage_limit":  { "name": "Discharge Voltage Limit" },
+      "charge_current_limit":     { "name": "Charge Current Limit" },
+      "discharge_current_limit":  { "name": "Discharge Current Limit" },
+      "max_cell_voltage":         { "name": "Max Cell Voltage" },
+      "min_cell_voltage":         { "name": "Min Cell Voltage" },
+      "max_cell_temp":            { "name": "Max Cell Temperature" },
+      "min_cell_temp":            { "name": "Min Cell Temperature" },
+      "heat_current":             { "name": "Heat Current" },
+      "cell_1_voltage":  { "name": "Cell 1 Voltage" },
+      "cell_2_voltage":  { "name": "Cell 2 Voltage" },
+      "cell_3_voltage":  { "name": "Cell 3 Voltage" },
+      "cell_4_voltage":  { "name": "Cell 4 Voltage" },
+      "cell_5_voltage":  { "name": "Cell 5 Voltage" },
+      "cell_6_voltage":  { "name": "Cell 6 Voltage" },
+      "cell_7_voltage":  { "name": "Cell 7 Voltage" },
+      "cell_8_voltage":  { "name": "Cell 8 Voltage" },
+      "cell_9_voltage":  { "name": "Cell 9 Voltage" },
+      "cell_10_voltage": { "name": "Cell 10 Voltage" },
+      "cell_11_voltage": { "name": "Cell 11 Voltage" },
+      "cell_12_voltage": { "name": "Cell 12 Voltage" },
+      "cell_13_voltage": { "name": "Cell 13 Voltage" },
+      "cell_14_voltage": { "name": "Cell 14 Voltage" },
+      "cell_15_voltage": { "name": "Cell 15 Voltage" },
+      "cell_16_voltage": { "name": "Cell 16 Voltage" },
+      "cell_1_temp":     { "name": "Cell 1 Temperature" },
+      "cell_2_temp":     { "name": "Cell 2 Temperature" },
+      "cell_3_temp":     { "name": "Cell 3 Temperature" },
+      "cell_4_temp":     { "name": "Cell 4 Temperature" }
     }
   }
 }

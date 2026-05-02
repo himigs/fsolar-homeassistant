@@ -5,18 +5,107 @@
         "title": "Configurar FSolar Battery",
         "description": "Insira as credenciais da sua conta FSolar",
         "data": {
-          "email": "Email",
-          "password": "Senha"
+          "username": "E-mail",
+          "password": "Senha",
+          "password_encrypted": "Senha já encriptada? (RSA)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar FSolar",
+        "description": "Suas credenciais expiraram. Por favor, insira-as novamente.",
+        "data": {
+          "username": "E-mail",
+          "password": "Senha",
+          "password_encrypted": "Senha já encriptada? (RSA)"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurar FSolar",
+        "description": "Atualize as credenciais da sua conta FSolar",
+        "data": {
+          "username": "E-mail",
+          "password": "Senha",
+          "password_encrypted": "Senha já encriptada? (RSA)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Falha ao conectar com a API FSolar",
-      "invalid_auth": "Credenciais inválidas",
-      "unknown": "Erro desconhecido"
+      "cannot_connect": "Falha ao conectar com a API FSolar. Verifique sua conexão com a internet.",
+      "invalid_auth": "E-mail ou senha inválidos. Verifique suas credenciais.",
+      "unknown": "Erro inesperado. Por favor, tente novamente."
     },
     "abort": {
-      "already_configured": "Conta já configurada"
+      "already_configured": "Esta conta FSolar já está configurada.",
+      "reauth_successful": "Reautenticação realizada com sucesso.",
+      "reconfigure_successful": "Reconfiguração realizada com sucesso."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opções FSolar",
+        "description": "Configurações da integração FSolar",
+        "data": {
+          "use_safety_reserve": "Habilitar Reserva de Segurança (Limite de Descarga)",
+          "safety_reserve_percent": "Reserva de Segurança (%)",
+          "scan_interval": "Intervalo de Atualização (minutos)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_soc":            { "name": "Carga da Bateria" },
+      "battery_remaining_kwh":  { "name": "Energia Disponível" },
+      "time_to_full":           { "name": "Tempo para Carga Completa" },
+      "time_to_empty":          { "name": "Tempo para Descarregar" },
+      "charging_status": {
+        "name": "Status de Carga",
+        "state": {
+          "standby":     "Em Espera",
+          "charging":    "Carregando",
+          "discharging": "Descarregando"
+        }
+      },
+      "battery_power":            { "name": "Potência da Bateria" },
+      "battery_voltage":          { "name": "Tensão da Bateria" },
+      "battery_current":          { "name": "Corrente da Bateria" },
+      "daily_charge_kwh":         { "name": "Carga Diária" },
+      "daily_discharge_kwh":      { "name": "Descarga Diária" },
+      "battery_temperature":      { "name": "Temperatura da Bateria" },
+      "battery_capacity":         { "name": "Capacidade da Bateria" },
+      "battery_capacity_kwh":     { "name": "Capacidade da Bateria (kWh)" },
+      "health":                   { "name": "Saúde da Bateria" },
+      "cycles":                   { "name": "Ciclos da Bateria" },
+      "charge_voltage_limit":     { "name": "Limite de Tensão de Carga" },
+      "discharge_voltage_limit":  { "name": "Limite de Tensão de Descarga" },
+      "charge_current_limit":     { "name": "Limite de Corrente de Carga" },
+      "discharge_current_limit":  { "name": "Limite de Corrente de Descarga" },
+      "max_cell_voltage":         { "name": "Tensão Máxima de Célula" },
+      "min_cell_voltage":         { "name": "Tensão Mínima de Célula" },
+      "max_cell_temp":            { "name": "Temperatura Máxima de Célula" },
+      "min_cell_temp":            { "name": "Temperatura Mínima de Célula" },
+      "heat_current":             { "name": "Corrente de Aquecimento" },
+      "cell_1_voltage":  { "name": "Tensão Célula 1" },
+      "cell_2_voltage":  { "name": "Tensão Célula 2" },
+      "cell_3_voltage":  { "name": "Tensão Célula 3" },
+      "cell_4_voltage":  { "name": "Tensão Célula 4" },
+      "cell_5_voltage":  { "name": "Tensão Célula 5" },
+      "cell_6_voltage":  { "name": "Tensão Célula 6" },
+      "cell_7_voltage":  { "name": "Tensão Célula 7" },
+      "cell_8_voltage":  { "name": "Tensão Célula 8" },
+      "cell_9_voltage":  { "name": "Tensão Célula 9" },
+      "cell_10_voltage": { "name": "Tensão Célula 10" },
+      "cell_11_voltage": { "name": "Tensão Célula 11" },
+      "cell_12_voltage": { "name": "Tensão Célula 12" },
+      "cell_13_voltage": { "name": "Tensão Célula 13" },
+      "cell_14_voltage": { "name": "Tensão Célula 14" },
+      "cell_15_voltage": { "name": "Tensão Célula 15" },
+      "cell_16_voltage": { "name": "Tensão Célula 16" },
+      "cell_1_temp":     { "name": "Temperatura Célula 1" },
+      "cell_2_temp":     { "name": "Temperatura Célula 2" },
+      "cell_3_temp":     { "name": "Temperatura Célula 3" },
+      "cell_4_temp":     { "name": "Temperatura Célula 4" }
     }
   }
 }

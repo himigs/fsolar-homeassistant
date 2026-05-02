@@ -1,0 +1,24 @@
+# Development & debug scripts (may contain credentials)
+dump_json.py
+
+# Internal development notes (not for public)
+IDEIAS_FUTURAS.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+*.env.local

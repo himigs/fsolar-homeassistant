@@ -1,22 +1,39 @@
-# Exemplos de Uso - FSolar Time Remaining
+# Exemplos de Uso - FSolar Integration
+
+> **⚠️ Nota de Versão (v2.1.0+):** O sensor `time_remaining` foi separado em dois sensores distintos:
+> - `time_to_empty` — ativo apenas durante a **descarga** (retorna *Indisponível* durante carga/standby)
+> - `time_to_full` — ativo apenas durante a **carga** (retorna *Indisponível* durante descarga/standby)
+>
+> **Vantagem:** Suas automações **não precisam mais verificar o `charging_status`**. Basta usar o valor numérico diretamente!
+
+---
 
 ## 📊 Cards para Dashboard
 
-### 1. Card Simples com Tempo Restante
+### 1. Card Simples - Tempo para Descarregar
 
 ```yaml
 type: entity
-entity: sensor.battery_12345_time_remaining
-name: Tempo Restante
-icon: mdi:timer-outline
+entity: sensor.battery_12345_time_to_empty
+name: Tempo até Descarregar
+icon: mdi:battery-arrow-down
 ```
 
-### 2. Card Gauge (Medidor)
+### 2. Card Simples - Tempo para Carregar
+
+```yaml
+type: entity
+entity: sensor.battery_12345_time_to_full
+name: Tempo até Carga Completa
+icon: mdi:battery-charging
+```
+
+### 3. Card Gauge - Autonomia Restante
 
 ```yaml
 type: gauge
-entity: sensor.battery_12345_time_remaining
-name: Tempo Restante
+entity: sensor.battery_12345_time_to_empty
+name: Autonomia Restante
 min: 0
 max: 10
 severity:
@@ -25,7 +42,7 @@ severity:
   red: 0
 ```
 
-### 3. Card Completo com Múltiplos Sensores
+### 4. Card Completo com Múltiplos Sensores
 
 ```yaml
 type: entities
@@ -35,13 +52,13 @@ entities:
     label: Estado
   - entity: sensor.battery_12345_battery_soc
     name: Carga da Bateria
-    icon: mdi:battery
   - entity: sensor.battery_12345_charging_status
     name: Status
-  - entity: sensor.battery_12345_time_remaining
-    name: Tempo Restante
-    icon: mdi:timer-outline
-  
+  - entity: sensor.battery_12345_time_to_empty
+    name: Tempo até Descarregar
+  - entity: sensor.battery_12345_time_to_full
+    name: Tempo até Carregar
+
   - type: section
     label: Potência
   - entity: sensor.battery_12345_battery_power
@@ -50,7 +67,7 @@ entities:
     name: Voltagem
   - entity: sensor.battery_12345_battery_current
     name: Corrente
-  
+
   - type: section
     label: Saúde
   - entity: sensor.battery_12345_health
@@ -61,78 +78,53 @@ entities:
     name: Temperatura
 ```
 
-### 4. Card de Estatísticas
-
-```yaml
-type: statistic
-entity: sensor.battery_12345_time_remaining
-name: Histórico Tempo Restante
-period:
-  calendar:
-    period: day
-stat_types:
-  - mean
-  - min
-  - max
-```
-
-### 5. Card Condicional (Só Mostra Durante Descarga)
+### 5. Card Condicional - Só Mostra Durante Descarga
 
 ```yaml
 type: conditional
 conditions:
-  - entity: sensor.battery_12345_charging_status
-    state: "Discharging"
+  - entity: sensor.battery_12345_time_to_empty
+    state_not: unavailable
 card:
   type: entity
-  entity: sensor.battery_12345_time_remaining
+  entity: sensor.battery_12345_time_to_empty
   name: ⚠️ Tempo até Descarga Completa
   icon: mdi:battery-alert
 ```
 
+---
+
 ## 🤖 Automações
+
+> **Dica:** Como os sensores retornam `None`/Indisponível quando inativos, **não é necessário checar o `charging_status`** nas condições. O HA ignora comparações numéricas com sensores indisponíveis.
 
 ### 1. Notificação - Bateria Quase Vazia (30 min)
 
 ```yaml
 automation:
   - alias: "Aviso: Bateria com 30 minutos restantes"
-    description: "Notifica quando resta apenas 30 minutos de carga"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.battery_12345_time_remaining
+        entity_id: sensor.battery_12345_time_to_empty
         below: 0.5  # 0.5 horas = 30 minutos
-    condition:
-      - condition: state
-        entity_id: sensor.battery_12345_charging_status
-        state: "Discharging"
-      - condition: numeric_state
-        entity_id: sensor.battery_12345_battery_soc
-        above: 10  # Evita notificações quando já está muito baixa
     action:
       - service: notify.mobile_app
         data:
           title: "⚠️ Bateria Baixa"
-          message: "A bateria tem apenas {{ states('sensor.battery_12345_time_remaining') | round(1) }} horas restantes!"
-          data:
-            priority: high
-            ttl: 0
+          message: >
+            A bateria tem apenas
+            {{ states('sensor.battery_12345_time_to_empty') | round(1) }} horas restantes!
 ```
 
-### 2. Notificação - Bateria Crítica (10 min)
+### 2. Alerta Crítico - 10 Minutos Restantes
 
 ```yaml
 automation:
   - alias: "CRÍTICO: Bateria com 10 minutos"
-    description: "Alerta crítico quando faltam 10 minutos"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.battery_12345_time_remaining
-        below: 0.17  # 0.17 horas ≈ 10 minutos
-    condition:
-      - condition: state
-        entity_id: sensor.battery_12345_charging_status
-        state: "Discharging"
+        entity_id: sensor.battery_12345_time_to_empty
+        below: 0.17  # ≈ 10 minutos
     action:
       - service: notify.mobile_app
         data:
@@ -140,74 +132,32 @@ automation:
           message: "Faltam menos de 10 minutos de carga!"
           data:
             priority: high
-            ttl: 0
             channel: alarm_stream
-      - service: light.turn_on
-        target:
-          entity_id: light.sala
-        data:
-          rgb_color: [255, 0, 0]
-          brightness: 255
-          flash: long
 ```
 
-### 3. Ligar Carregamento Quando Baixo
-
-```yaml
-automation:
-  - alias: "Iniciar carregamento automático"
-    description: "Inicia carregamento quando tempo restante é baixo"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.battery_12345_time_remaining
-        below: 1  # 1 hora
-    condition:
-      - condition: state
-        entity_id: sensor.battery_12345_charging_status
-        state: "Discharging"
-      - condition: numeric_state
-        entity_id: sensor.battery_12345_battery_soc
-        below: 30
-      - condition: time
-        after: "18:00:00"
-        before: "23:00:00"
-    action:
-      - service: switch.turn_on
-        target:
-          entity_id: switch.battery_charger
-      - service: notify.mobile_app
-        data:
-          title: "🔌 Carregamento Iniciado"
-          message: "Bateria baixa detectada, iniciando carregamento automático"
-```
-
-### 4. Notificar Quando Carga Completa Próxima
+### 3. Notificar Quando Carga Completa Próxima
 
 ```yaml
 automation:
   - alias: "Bateria quase cheia"
-    description: "Notifica quando faltam 30 min para carga completa"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.battery_12345_time_remaining
-        below: 0.5
-    condition:
-      - condition: state
-        entity_id: sensor.battery_12345_charging_status
-        state: "Charging"
+        entity_id: sensor.battery_12345_time_to_full
+        below: 0.5  # 30 minutos
     action:
       - service: notify.mobile_app
         data:
           title: "✅ Carga Quase Completa"
-          message: "A bateria estará totalmente carregada em aproximadamente {{ states('sensor.battery_12345_time_remaining') | round(1) }} horas"
+          message: >
+            A bateria estará totalmente carregada em
+            {{ states('sensor.battery_12345_time_to_full') | round(1) }} horas.
 ```
 
-### 5. Relatório Diário
+### 4. Relatório Diário
 
 ```yaml
 automation:
   - alias: "Relatório diário da bateria"
-    description: "Envia relatório diário sobre uso da bateria"
     trigger:
       - platform: time
         at: "20:00:00"
@@ -218,14 +168,16 @@ automation:
           message: >
             Carga atual: {{ states('sensor.battery_12345_battery_soc') }}%
             Status: {{ states('sensor.battery_12345_charging_status') }}
-            {% if states('sensor.battery_12345_charging_status') == 'Discharging' %}
-            Tempo restante: {{ states('sensor.battery_12345_time_remaining') | round(1) }} horas
-            {% elif states('sensor.battery_12345_charging_status') == 'Charging' %}
-            Tempo até completa: {{ states('sensor.battery_12345_time_remaining') | round(1) }} horas
+            {% if states('sensor.battery_12345_time_to_empty') not in ['unavailable','unknown'] %}
+            Autonomia restante: {{ states('sensor.battery_12345_time_to_empty') | round(1) }} horas
+            {% elif states('sensor.battery_12345_time_to_full') not in ['unavailable','unknown'] %}
+            Tempo até carga completa: {{ states('sensor.battery_12345_time_to_full') | round(1) }} horas
             {% endif %}
             Saúde: {{ states('sensor.battery_12345_health') }}%
             Ciclos: {{ states('sensor.battery_12345_cycles') }}
 ```
+
+---
 
 ## 📈 Gráficos e História
 
@@ -233,104 +185,60 @@ automation:
 
 ```yaml
 type: history-graph
-title: Histórico de Tempo Restante
+title: Autonomia da Bateria
 entities:
-  - entity: sensor.battery_12345_time_remaining
-    name: Tempo Restante
+  - entity: sensor.battery_12345_time_to_empty
+    name: Tempo até Descarregar
+  - entity: sensor.battery_12345_time_to_full
+    name: Tempo até Carregar
   - entity: sensor.battery_12345_battery_soc
     name: SOC
 hours_to_show: 24
-refresh_interval: 0
 ```
 
-### 2. Card Apex Charts (requer custom card)
+> **Nota sobre gaps no gráfico:** Quando `time_to_empty` está *Indisponível* (durante a carga), o gráfico exibirá um intervalo vazio. Esse comportamento é intencional e informativo — você consegue ver visualmente quando a bateria estava carregando vs. descarregando.
+
+### 2. ApexCharts (requer custom card)
 
 ```yaml
 type: custom:apexcharts-card
 header:
   show: true
-  title: Tempo Restante vs SOC
-span:
-  start: day
+  title: Autonomia vs SOC
 graph_span: 24h
 series:
-  - entity: sensor.battery_12345_time_remaining
-    name: Tempo Restante (h)
+  - entity: sensor.battery_12345_time_to_empty
+    name: Tempo até Descarregar (h)
     yaxis_id: time
-    stroke_width: 2
-    color: blue
+    color: "#f44336"
+  - entity: sensor.battery_12345_time_to_full
+    name: Tempo até Carregar (h)
+    yaxis_id: time
+    color: "#4caf50"
   - entity: sensor.battery_12345_battery_soc
     name: SOC (%)
     yaxis_id: soc
-    stroke_width: 2
-    color: green
+    color: "#2196f3"
 yaxis:
   - id: time
     decimals: 1
-    apex_config:
-      tickAmount: 5
   - id: soc
     opposite: true
-    decimals: 0
     max: 100
 ```
 
-## 🎯 Scripts Úteis
+---
 
-### 1. Script para Economizar Bateria
-
-```yaml
-script:
-  battery_saving_mode:
-    alias: "Modo Economia de Bateria"
-    sequence:
-      - service: notify.mobile_app
-        data:
-          title: "🔋 Modo Economia Ativado"
-          message: "Desligando dispositivos não essenciais"
-      - service: light.turn_off
-        target:
-          entity_id: 
-            - light.sala
-            - light.quarto
-      - service: climate.turn_off
-        target:
-          entity_id: climate.ar_condicionado
-      - service: switch.turn_off
-        target:
-          entity_id: switch.tv
-```
-
-### 2. Script para Verificar Status
-
-```yaml
-script:
-  check_battery_status:
-    alias: "Verificar Status da Bateria"
-    sequence:
-      - service: notify.mobile_app
-        data:
-          title: "📊 Status da Bateria"
-          message: >
-            Carga: {{ states('sensor.battery_12345_battery_soc') }}%
-            Status: {{ states('sensor.battery_12345_charging_status') }}
-            Tempo restante: {{ states('sensor.battery_12345_time_remaining') | round(1) }} h
-            Potência: {{ states('sensor.battery_12345_battery_power') }} W
-            Temperatura: {{ states('sensor.battery_12345_battery_temperature') }}°C
-```
-
-## 🎨 Lovelace Dashboard Completo
+## 🎨 Dashboard Completo
 
 ```yaml
 type: vertical-stack
 cards:
-  # Cabeçalho
   - type: markdown
     content: |
       # 🔋 Bateria FSolar
-      Status atualizado: {{ as_timestamp(states.sensor.battery_12345_battery_soc.last_changed) | timestamp_custom('%H:%M:%S') }}
-  
-  # Indicador principal
+      Atualizado: {{ as_timestamp(states.sensor.battery_12345_battery_soc.last_changed) | timestamp_custom('%H:%M:%S') }}
+
   - type: horizontal-stack
     cards:
       - type: gauge
@@ -342,13 +250,13 @@ cards:
           green: 60
           yellow: 30
           red: 0
-      
       - type: entity
-        entity: sensor.battery_12345_time_remaining
-        name: Tempo Restante
-        icon: mdi:timer-outline
-  
-  # Status detalhado
+        entity: sensor.battery_12345_time_to_empty
+        name: Autonomia Restante
+      - type: entity
+        entity: sensor.battery_12345_time_to_full
+        name: Tempo p/ Carregar
+
   - type: entities
     entities:
       - entity: sensor.battery_12345_charging_status
@@ -359,64 +267,29 @@ cards:
         name: Voltagem
       - entity: sensor.battery_12345_battery_temperature
         name: Temperatura
-  
-  # Saúde
-  - type: horizontal-stack
-    cards:
-      - type: entity
-        entity: sensor.battery_12345_health
-        name: Saúde
-      - type: entity
-        entity: sensor.battery_12345_cycles
-        name: Ciclos
-  
-  # Gráfico
+
   - type: history-graph
     entities:
       - sensor.battery_12345_battery_soc
-      - sensor.battery_12345_time_remaining
+      - sensor.battery_12345_time_to_empty
+      - sensor.battery_12345_time_to_full
     hours_to_show: 12
 ```
 
+---
+
 ## 💡 Dicas
 
-1. **Ajuste os IDs**: Substitua `battery_12345` pelo ID real da sua bateria
-2. **Teste as automações**: Ajuste os valores de trigger de acordo com suas necessidades
-3. **Personalização**: Modifique cores, ícones e mensagens conforme preferir
-4. **Notificações**: Configure o serviço de notificação correto (mobile_app, telegram, etc)
-5. **Backup**: Sempre faça backup antes de modificar configurações
-
-## 🔧 Personalização Avançada
-
-### Template Sensor para Minutos
-
-Se preferir ver o tempo em minutos:
+1. **Substitua o ID**: Troque `battery_12345` pelo ID real da sua bateria.
+2. **Sem condição de status**: Com os novos sensores, não é mais necessário checar `charging_status` nas automações de tempo.
+3. **Template em minutos** (sensor auxiliar):
 
 ```yaml
 template:
   - sensor:
-      - name: "Battery Time Remaining Minutes"
-        unique_id: battery_time_remaining_minutes
+      - name: "Autonomia em Minutos"
         unit_of_measurement: "min"
         state: >
-          {% set hours = states('sensor.battery_12345_time_remaining') | float(0) %}
-          {{ (hours * 60) | round(0) }}
-        icon: mdi:timer
-```
-
-### Template para Tempo Formatado
-
-Para exibir como "2h 30min":
-
-```yaml
-template:
-  - sensor:
-      - name: "Battery Time Formatted"
-        unique_id: battery_time_formatted
-        state: >
-          {% set time = states('sensor.battery_12345_time_remaining') | float(0) %}
-          {% set hours = time | int %}
-          {% set minutes = ((time - hours) * 60) | int %}
-          {{ hours }}h {{ minutes }}min
-        icon: mdi:timer
+          {% set h = states('sensor.battery_12345_time_to_empty') | float(-1) %}
+          {{ (h * 60) | round(0) if h >= 0 else 'unavailable' }}
 ```

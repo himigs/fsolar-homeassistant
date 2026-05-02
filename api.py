@@ -41,41 +41,62 @@ class FSolarAPI:
         try:
             url = f"{self.base_url}/userlogin"
             
-            # Se a senha já está encriptada, usar diretamente
-            # Senão, avisar que precisa ser encriptada manualmente
+            # If the password is already encrypted, use it directly
             if self.password_encrypted:
                 encrypted_password = self.password
                 _LOGGER.debug("Using pre-encrypted password")
             else:
-                _LOGGER.warning(
-                    "Password is not encrypted. For security, please provide "
-                    "an encrypted password using the FSolar web interface. "
-                    "See documentation for details."
-                )
-                # Por enquanto, vamos tentar enviar a senha como está
-                # (isso provavelmente vai falhar)
-                encrypted_password = self.password
+                _LOGGER.debug("Auto-encrypting plain password with RSA")
+                try:
+                    from cryptography.hazmat.primitives import serialization
+                    from cryptography.hazmat.primitives.asymmetric import padding
+                    from cryptography.hazmat.backends import default_backend
+                    import base64
+                    
+                    # Static RSA public key from the FelicitySolar portal
+                    PUB_KEY_STR = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAJE68pjWZmtSg6ZJs9FZugJXC6bBSluTW6mJttOLOaljrdErVnM5DNN+YFzpB9pAysTErjY1bnSVuEwQSwptnqUji7Ch2qMj2n+0eCp8p6vtSh7/tFr2ul8nDRtkoswLANAIwtUk/G85ipMpmY1W642LImnEJmGkkddlbjbjxJTZWR5hc/d9cPWb+AR77LxFFrMik3c+44v1kQlIPFP6EjIbOvt/Lv7fHWD9JI/YzN4y1gK7C/VQdNGuikQyNg+5W3rg9ecYf9I5uLAQwY/hxeI3lbNsErebqKe2EbJ8AwcNIC0lDBz53Sq0ML89QapEuy3fB+upuctxLULVDCbNwIDAQAB"
+                    
+                    public_key_bytes = base64.b64decode(PUB_KEY_STR)
+                    public_key = serialization.load_der_public_key(public_key_bytes, backend=default_backend())
+                    
+                    encrypted = public_key.encrypt(
+                        self.password.encode('utf-8'),
+                        padding.PKCS1v15()
+                    )
+                    encrypted_password = base64.b64encode(encrypted).decode('utf-8')
+                except ImportError:
+                    _LOGGER.error("Cryptography library is missing. Cannot encrypt password natively.")
+                    encrypted_password = self.password
+                except Exception as e:
+                    _LOGGER.error("Error encrypting password: %s", e)
+                    encrypted_password = self.password
             
             payload = {
-                "userName": self.username,
-                "password": encrypted_password,
+                "userName": self.username.strip(),
+                "password": encrypted_password.strip(),
                 "version": "1.0"
             }
             
-            _LOGGER.debug("Attempting login to FSolar API for user: %s", self.username)
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/plain, */*",
+                "lang": "pt_BR",
+            }
             
-            async with self.session.post(url, json=payload) as response:
+            _LOGGER.debug("Attempting login to FSolar API with payload: %s", payload)
+            
+            async with self.session.post(url, json=payload, headers=headers, ssl=False) as response:
                 response.raise_for_status()
                 data = await response.json()
                 
-                _LOGGER.debug("Login response status: %s", response.status)
+                _LOGGER.debug("Login response status: %s, data: %s", response.status, data)
                 
-                # A resposta inclui o token no campo "data.token"
+                # The response includes the token in data.token
                 if isinstance(data, dict):
                     if data.get("code") == 200 and "data" in data:
                         token = data["data"].get("token")
                         if token:
-                            # Remover prefixo "Bearer_" se existir
+                            # Strip "Bearer_" prefix if present
                             self.token = token.replace("Bearer_", "")
                             self.is_authenticated = True
                             _LOGGER.info("Successfully authenticated with FSolar API")
@@ -86,22 +107,22 @@ class FSolarAPI:
                         _LOGGER.info("Successfully authenticated with FSolar API")
                         return True
                 
-                # Às vezes retorna o token diretamente como string
+                # Sometimes the token is returned directly as a string
                 elif isinstance(data, str):
                     self.token = data.replace("Bearer_", "")
                     self.is_authenticated = True
                     _LOGGER.info("Successfully authenticated with FSolar API")
                     return True
                 
-                _LOGGER.error("No token received from FSolar API: %s", data)
+                _LOGGER.warning("No token received from FSolar API: %s", data)
                 return False
                     
         except aiohttp.ClientError as err:
-            _LOGGER.error("Failed to authenticate with FSolar API: %s", err)
+            _LOGGER.warning("Failed to authenticate with FSolar API (ClientError): %s", err)
             self.is_authenticated = False
             return False
         except Exception as err:
-            _LOGGER.error("Unexpected error during authentication: %s", err)
+            _LOGGER.warning("Unexpected error during authentication: %s", err)
             self.is_authenticated = False
             return False
 
@@ -114,10 +135,10 @@ class FSolarAPI:
 
         url = f"{self.base_url}/{endpoint}"
         headers = {}
-        
-        # Adicionar token de autenticação no header
+
+        # Add authentication token to request headers
         if self.token:
-            # O token pode ter o prefixo "Bearer_" ou ser enviado diretamente
+            # The token may include a "Bearer_" prefix or be sent as-is
             if self.token.startswith("Bearer_"):
                 headers["Authorization"] = self.token
             else:
@@ -125,9 +146,9 @@ class FSolarAPI:
         
         try:
             async with self.session.post(
-                url, json=payload or {}, headers=headers
+                url, json=payload or {}, headers=headers, ssl=False
             ) as response:
-                # Se token expirado, tentar re-autenticar
+                # Re-authenticate if token has expired
                 if response.status == 401 or response.status == 403:
                     _LOGGER.warning("Token expired, attempting to re-authenticate")
                     await self.login()
@@ -138,7 +159,7 @@ class FSolarAPI:
                             headers["Authorization"] = f"Bearer_{self.token}"
                     
                     async with self.session.post(
-                        url, json=payload or {}, headers=headers
+                        url, json=payload or {}, headers=headers, ssl=False
                     ) as retry_response:
                         retry_response.raise_for_status()
                         return await retry_response.json()
@@ -147,7 +168,7 @@ class FSolarAPI:
                 return await response.json()
                 
         except aiohttp.ClientError as err:
-            _LOGGER.error("API request failed: %s", err)
+            _LOGGER.warning("API request failed (network error): %s", err)
             raise
 
     async def get_devices(self) -> list[dict[str, Any]]:
@@ -156,7 +177,7 @@ class FSolarAPI:
             # Endpoint correto e payload de paginação
             payload = {
                 "pageNum": 1,
-                "pageSize": 100,  # Buscar até 100 dispositivos
+                "pageSize": 100,  # Fetch up to 100 devices
                 "deviceSn": "",
                 "status": "",
                 "sampleFlag": "",
@@ -167,11 +188,11 @@ class FSolarAPI:
             
             _LOGGER.debug("Get devices response: %s", data)
             
-            # Extrair lista de dispositivos da resposta
+            # Extract device list from response
             if isinstance(data, dict):
                 if data.get("code") == 200 and "data" in data:
                     device_data = data["data"]
-                    # A lista está em data.dataList
+                    # Device list is nested under data.dataList
                     if isinstance(device_data, dict) and "dataList" in device_data:
                         devices = device_data["dataList"]
                         _LOGGER.info("Found %d devices", len(devices))
@@ -185,7 +206,7 @@ class FSolarAPI:
             return []
             
         except Exception as err:
-            _LOGGER.error("Failed to get devices: %s", err)
+            _LOGGER.warning("Failed to get devices (network error): %s", err)
             return []
 
     async def get_battery_data(self, device_sn: str, device_type: str = "OC") -> dict[str, Any]:
@@ -203,7 +224,7 @@ class FSolarAPI:
             
             _LOGGER.debug("Battery data for %s: %s", device_sn, data)
             
-            # Extrair dados da resposta
+            # Extract data from response
             if isinstance(data, dict):
                 if data.get("code") == 200 and "data" in data:
                     return data["data"]
