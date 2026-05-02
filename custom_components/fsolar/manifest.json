@@ -1,7 +1,7 @@
 {
   "domain": "fsolar",
   "name": "FSolar Battery",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "codeowners": ["@himigs"],
   "config_flow": true,
   "dependencies": [],
