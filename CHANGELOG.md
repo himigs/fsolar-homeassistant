@@ -1,5 +1,10 @@
 # Changelog - FSolar Integration
 
+## Versão 2.2.1 - HACS Compliance Fix (Maio/2026)
+- **Bug Fix:** Estrutura de pastas corrigida para atender às exigências do HACS. Todos os arquivos da integração foram movidos para `custom_components/fsolar/`, permitindo a instalação nativa pela loja do HACS.
+
+---
+
 ## Versão 2.2.0 - Smart Sensors & HACS Ready (Maio/2026)
 
 ### ✨ Novas Funcionalidades:
