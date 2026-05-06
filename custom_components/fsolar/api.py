@@ -46,29 +46,35 @@ class FSolarAPI:
                 encrypted_password = self.password
                 _LOGGER.debug("Using pre-encrypted password")
             else:
-                _LOGGER.debug("Auto-encrypting plain password with RSA")
+                _LOGGER.debug("Auto-encrypting plain password with pure Python RSA")
                 try:
-                    from cryptography.hazmat.primitives import serialization
-                    from cryptography.hazmat.primitives.asymmetric import padding
-                    from cryptography.hazmat.backends import default_backend
+                    import os
                     import base64
                     
-                    # Static RSA public key from the FelicitySolar portal
-                    PUB_KEY_STR = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnAJE68pjWZmtSg6ZJs9FZugJXC6bBSluTW6mJttOLOaljrdErVnM5DNN+YFzpB9pAysTErjY1bnSVuEwQSwptnqUji7Ch2qMj2n+0eCp8p6vtSh7/tFr2ul8nDRtkoswLANAIwtUk/G85ipMpmY1W642LImnEJmGkkddlbjbjxJTZWR5hc/d9cPWb+AR77LxFFrMik3c+44v1kQlIPFP6EjIbOvt/Lv7fHWD9JI/YzN4y1gK7C/VQdNGuikQyNg+5W3rg9ecYf9I5uLAQwY/hxeI3lbNsErebqKe2EbJ8AwcNIC0lDBz53Sq0ML89QapEuy3fB+upuctxLULVDCbNwIDAQAB"
+                    # Static RSA public key (modulus n and exponent e)
+                    n = 19694294570212165561114677776721213063138950582936024534821113210993780288680648165028731618750881082507630535454529719780275457869585368895006838463926304906140752027585856802841010936740719642599968039885192850785179469989290023457123731835137175647572344982964163694834671310481060735891771779706609128327622230485545580107504124698328756760242250293873701303968820029326338427287057048698214631792840757078501358598315522390393630461257970523902598121510263483456826740829558106271962763360060136418754704266213749087381535699407190061088837877369821094193720439330978518479814106384537743832395914931592519260983
+                    e = 65537
                     
-                    public_key_bytes = base64.b64decode(PUB_KEY_STR)
-                    public_key = serialization.load_der_public_key(public_key_bytes, backend=default_backend())
+                    message = self.password.encode('utf-8')
+                    key_size = (n.bit_length() + 7) // 8
                     
-                    encrypted = public_key.encrypt(
-                        self.password.encode('utf-8'),
-                        padding.PKCS1v15()
-                    )
-                    encrypted_password = base64.b64encode(encrypted).decode('utf-8')
-                except ImportError:
-                    _LOGGER.error("Cryptography library is missing. Cannot encrypt password natively.")
-                    encrypted_password = self.password
-                except Exception as e:
-                    _LOGGER.error("Error encrypting password: %s", e)
+                    # PKCS#1 v1.5 padding: 0x00 || 0x02 || PS || 0x00 || message
+                    ps_len = key_size - len(message) - 3
+                    if ps_len < 8:
+                        raise ValueError("Password too long for RSA encryption")
+                        
+                    ps = bytearray(os.urandom(ps_len))
+                    for i in range(ps_len):
+                        while ps[i] == 0:
+                            ps[i] = os.urandom(1)[0]
+                            
+                    padded = b'\x00\x02' + ps + b'\x00' + message
+                    m = int.from_bytes(padded, 'big')
+                    c = pow(m, e, n)
+                    
+                    encrypted_password = base64.b64encode(c.to_bytes(key_size, 'big')).decode('utf-8')
+                except Exception as ex:
+                    _LOGGER.error("Error encrypting password: %s", ex)
                     encrypted_password = self.password
             
             payload = {

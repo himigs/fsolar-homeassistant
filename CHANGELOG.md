@@ -1,5 +1,11 @@
 # Changelog - FSolar Integration
 
+## Versão 2.2.2 - Correção de Autenticação RSA (Maio/2026)
+- **Bug Fix Crítico:** Corrigido o erro "Invalid email or password" que ocorria mesmo usando as credenciais corretas. A integração agora possui criptografia RSA 100% nativa em Python puro, eliminando a dependência da biblioteca externa `cryptography`. Isso garante que o login com a senha comum sempre funcione em qualquer sistema operacional do Home Assistant (HA OS, Docker, Core), evitando que a API da FSolar rejeite a senha por falta de criptografia.
+- **Limpeza:** Removida a dependência `cryptography` do `manifest.json`.
+
+---
+
 ## Versão 2.2.1 - HACS Compliance Fix (Maio/2026)
 - **Bug Fix:** Estrutura de pastas corrigida para atender às exigências do HACS. Todos os arquivos da integração foram movidos para `custom_components/fsolar/`, permitindo a instalação nativa pela loja do HACS.
 
